@@ -37,14 +37,14 @@ func main() {
 
 	// Send requests in a loop
 	for i := 0; i < *count; i++ {
+		now := time.Now().Format("2006-01-02 15:04:05.000") // time when request was originally initiated
 		resp, err := client.Get(*url)
 		if err != nil {
 			log.Printf("Error making request: %v", err)
 			continue
 		}
 
-		// Print response status
-		fmt.Printf("Request %d: %s\n", i+1, resp.Status)
+		fmt.Printf("[%s] Request %d: %s\n", now, i+1, resp.Status)
 		resp.Body.Close()
 
 		// Pause between requests
