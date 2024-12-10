@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/quic-go/quic-go"
 	"github.com/quic-go/quic-go/http3"
 )
 
@@ -16,6 +17,7 @@ func main() {
 	pause := flag.Int("pause", 1, "Pause duration between requests in seconds")
 	count := flag.Int("count", 1, "Number of requests to send")
 	inc := flag.Int("inc", 0, "Increment the pause length by this amount")
+	keepalive := flag.Int("keepalive", 30, "Keepalive period in seconds")
 	flag.Parse()
 
 	// Validate flags
@@ -28,9 +30,15 @@ func main() {
 	if *count < 1 {
 		log.Fatal("Count must be at least 1")
 	}
+	if *keepalive < 1 {
+		log.Fatal("keepalive period must be at least 1 second")
+	}
 
 	// Force QUIC for connections
-	transport := &http3.Transport{}
+	transport := &http3.Transport{
+		QUICConfig: &quic.Config{KeepAlivePeriod: time.Duration(*keepalive) * time.Second},
+	}
+
 	client := &http.Client{
 		Transport: transport,
 	}
