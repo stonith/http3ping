@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"time"
+	"os"
+	"io"
 
 	"github.com/quic-go/quic-go"
 	"github.com/quic-go/quic-go/http3"
@@ -33,6 +35,18 @@ func main() {
 		log.Fatal("Count must be at least 1")
 	}
 
+	var keyLog io.Writer
+	if filename := os.Getenv("SSLKEYLOGFILE"); len(filename) > 0 {
+		f, err := os.Create(filename)
+		if err != nil {
+			fmt.Printf("Could not create key log file: %s\n", err.Error())
+			os.Exit(1)
+		}
+		defer f.Close()
+		keyLog = f
+	}
+
+
 	quicConfig := &quic.Config{
 		KeepAlivePeriod: time.Duration(*keepalive) * time.Second,
 		MaxIdleTimeout:  time.Duration(*idleTimeout) * time.Second,
@@ -43,6 +57,7 @@ func main() {
 		QUICConfig: quicConfig,
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
+			KeyLogWriter:       keyLog,
 		},
 	}
 
