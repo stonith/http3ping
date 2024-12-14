@@ -4,6 +4,8 @@ go 1.23
 
 require github.com/quic-go/quic-go v0.48.2
 
+// replace github.com/userName/otherModule v0.0.0 => ../../quic-go/quic-go
+
 require (
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/google/pprof v0.0.0-20210407192527-94a9f03dee38 // indirect
