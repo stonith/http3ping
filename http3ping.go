@@ -16,18 +16,21 @@ import (
 
 func main() {
 	// Define command-line flags
-	url := flag.String("url", "", "The URL to send requests to")
-	pause := flag.Int("pause", 1, "Pause duration between requests in seconds")
+	pause := flag.Int("pause", 35, "Pause duration between requests in seconds")
 	count := flag.Int("count", 1, "Number of requests to send")
 	inc := flag.Int("inc", 0, "Increment the pause length by this amount")
 	keepalive := flag.Int("keepalive", 0, "Keepalive period in seconds")
-	idleTimeout := flag.Int("idletimeout", 2000, "Idle timeout in seconds")
+	idleTimeout := flag.Int("idletimeout", 600000, "Idle timeout in milliseconds")
 	flag.Parse()
 
-	// Validate flags
-	if *url == "" {
-		log.Fatal("URL is required")
+	// Get URL from remaining arguments
+	args := flag.Args()
+	if len(args) != 1 {
+		log.Fatal("Exactly one URL argument is required")
 	}
+	url := args[0]
+
+	// Validate flags
 	if *pause < 0 {
 		log.Fatal("Pause duration must be non-negative")
 	}
@@ -46,10 +49,9 @@ func main() {
 		keyLog = f
 	}
 
-
 	quicConfig := &quic.Config{
 		KeepAlivePeriod: time.Duration(*keepalive) * time.Second,
-		MaxIdleTimeout:  time.Duration(*idleTimeout) * time.Second,
+		MaxIdleTimeout:  time.Duration(*idleTimeout) * time.Millisecond,
 	}
 
 	// Force QUIC for connections and don't verify TLS
@@ -67,9 +69,10 @@ func main() {
 	}
 
 	// Send requests in a loop
+	log.Printf("Sending %d requests to %s with pause %d and increment %d", *count, url, *pause, *inc)
 	for i := 0; i < *count; i++ {
 		now := time.Now().Format("2006-01-02 15:04:05.000") // time when request was originally initiated
-		resp, err := client.Get(*url)
+		resp, err := client.Get(url)
 		if err != nil {
 			log.Printf("Error making request: %v", err)
 			continue
@@ -79,6 +82,11 @@ func main() {
 		resp.Body.Close()
 
 		// Pause between requests
-		time.Sleep(time.Duration(*pause+i*(*inc)) * time.Second)
+		if i < *count-1 {
+			if *inc > 0 {
+				log.Printf("Pausing for %d seconds", *pause+i*(*inc))
+			}
+			time.Sleep(time.Duration(*pause+i*(*inc)) * time.Second)
+		}
 	}
 }
