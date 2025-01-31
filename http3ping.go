@@ -3,15 +3,16 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
-	"time"
 	"os"
-	"io"
+	"time"
+
+	"crypto/tls"
 
 	"github.com/quic-go/quic-go"
 	"github.com/quic-go/quic-go/http3"
-	"crypto/tls"
 )
 
 func main() {
@@ -73,12 +74,30 @@ func main() {
 	for i := 0; i < *count; i++ {
 		now := time.Now().Format("2006-01-02 15:04:05.000") // time when request was originally initiated
 		resp, err := client.Get(url)
+
+		// Log the negotiated idle timeout after the first request
+		if i == 0 {
+			if h3Transport, ok := client.Transport.(*http3.Transport); ok {
+				if conn := h3Transport.GetQUICConnection(); conn != nil {
+					timeout := conn.NegotiatedIdleTimeout()
+					if timeout == 0 {
+						log.Printf("Warning: Got zero idle timeout")
+					} else {
+						log.Printf("Actual negotiated idle timeout: %v (client: %v)",
+							timeout,
+							quicConfig.MaxIdleTimeout)
+					}
+				}
+			}
+		}
+
 		if err != nil {
 			log.Printf("Error making request: %v", err)
 			continue
 		}
 
 		fmt.Printf("[%s] Request %d: %s\n", now, i+1, resp.Status)
+
 		resp.Body.Close()
 
 		// Pause between requests
